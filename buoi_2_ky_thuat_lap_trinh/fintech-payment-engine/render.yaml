@@ -1,0 +1,23 @@
+# Render Blueprint — Zero-dependency Node app.
+#
+# CẢNH BÁO: filesystem của Render (plan Free) là TẠM THỜI (ephemeral).
+# Mỗi lần deploy/restart/tỉnh dậy sau khi ngủ đông, toàn bộ data/fintech.db
+# sẽ mất và app seed lại từ đầu. Đây là demo, KHÔNG dùng cho dữ liệu thật.
+# Muốn giữ dữ liệu: dùng Render Disk (trả phí) hoặc DB ngoài.
+services:
+  - type: web
+    name: fintech-payment-engine
+    runtime: node
+    plan: free
+    region: singapore
+    # Không có dependency → không cần bước build.
+    buildCommand: ""
+    startCommand: node src/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.15.0
+      # Secret ký HMAC của VNPay. Nếu để trống, gateway dùng secret dev
+      # và in cảnh báo ra log — chỉ chấp nhận được cho demo.
+      - key: VNP_HASH_SECRET
+        sync: false

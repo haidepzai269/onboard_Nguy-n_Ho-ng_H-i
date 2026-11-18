@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FinTech Mission Control</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #131a22;
+    --panel-2: #0f151c;
+    --line: #223040;
+    --text: #e6edf3;
+    --muted: #8b9bb0;
+    --green: #3ddc97;
+    --red: #ff6b6b;
+    --amber: #f5c451;
+    --blue: #6aa9ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(900px 500px at 20% -10%, #16283a 0%, transparent 60%), var(--bg);
+    color: var(--text);
+    font: 15px/1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 21px; margin: 0; letter-spacing: .2px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); margin-right: 6px; }
+  .dot.up { background: var(--green); box-shadow: 0 0 10px rgba(61, 220, 151, .6); }
+  .dot.down { background: var(--red); }
+  .grid { display: grid; gap: 16px; margin-top: 22px; }
+  .cols { grid-template-columns: 1.15fr .85fr; }
+  @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  .balance { font-size: 44px; font-weight: 700; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+  .balance small { font-size: 18px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  button {
+    font: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+    border-radius: 10px; padding: 10px 14px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text); transition: transform .06s ease, border-color .15s;
+  }
+  button:hover:not(:disabled) { border-color: #3a5570; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .5; cursor: progress; }
+  button.primary { background: linear-gradient(180deg, #1d4f7a, #173e60); border-color: #2b6c9f; }
+  button.danger { background: linear-gradient(180deg, #6b2230, #4d1824); border-color: #8c2f41; }
+  button.ghost { background: transparent; }
+  .pill { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #1b2735; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
+  .stat { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #1b2735; font-size: 14px; }
+  .stat:last-child { border-bottom: 0; }
+  .stat b { font-variant-numeric: tabular-nums; }
+  .ok { color: var(--green); }
+  .bad { color: var(--red); }
+  .warn { color: var(--amber); }
+  .bars { margin-top: 12px; display: grid; gap: 10px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .bar { height: 8px; background: #18222d; border-radius: 99px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .35s ease; }
+  .bar.naive > i { background: linear-gradient(90deg, #b8483f, var(--red)); }
+  .bar.opt > i { background: linear-gradient(90deg, #1f8a63, var(--green)); }
+  .log { margin-top: 12px; font-size: 12px; color: var(--muted); min-height: 18px; }
+  .type { font-size: 11px; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--line); }
+  .t-WITHDRAW { color: var(--red); } .t-DEPOSIT { color: var(--green); } .t-REFUND { color: var(--blue); } .t-CHARGE { color: var(--amber); }
+  .s-REFUNDED { text-decoration: line-through; opacity: .65; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>FinTech Mission Control</h1>
+      <div class="sub">Zero-dependency · SQLite · Async Mutex · Big-O Reconcile</div>
+    </div>
+    <div class="sub"><span id="health" class="dot"></span><span id="healthText">đang kết nối…</span></div>
+  </header>
+
+  <div class="grid cols">
+    <section class="card">
+      <h2>Số dư ví <span class="pill" id="walletId">WAL-8892</span></h2>
+      <div class="balance" id="balance">—<small>đ</small></div>
+      <div class="meta" id="owner">đang tải…</div>
+      <div class="meta" id="updated"></div>
+      <div class="row">
+        <button class="primary" id="btnRace">💥 Kích nổ Race Condition</button>
+        <button class="ghost" id="btnRecon">🧮 Đối soát</button>
+        <button class="ghost" id="btnRefund">↩️ Hoàn tiền</button>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+
+    <section class="card">
+      <h2>Kết quả bắn tải</h2>
+      <div class="stat"><span>Tổng request</span><b id="rTotal">—</b></div>
+      <div class="stat"><span>SUCCESS</span><b class="ok" id="rOk">—</b></div>
+      <div class="stat"><span>INSUFFICIENT_FUNDS</span><b class="warn" id="rIns">—</b></div>
+      <div class="stat"><span>Số dư sau khi bắn</span><b id="rBal">—</b></div>
+      <div class="stat"><span>Chênh lệch thời điểm gửi</span><b id="rSpread">—</b></div>
+      <div class="stat"><span>Số dư âm?</span><b id="rNeg" class="ok">—</b></div>
+    </section>
+  </div>
+
+  <div class="grid cols">
+    <section class="card">
+      <h2>Đối soát: O(n²) vs O(n)</h2>
+      <div class="bars">
+        <div>
+          <div class="bar-label"><span>Naive — indexOf trong vòng lặp</span><b id="naiveMs">—</b></div>
+          <div class="bar naive"><i id="naiveBar"></i></div>
+        </div>
+        <div>
+          <div class="bar-label"><span>Optimized — Map tra cứu O(1)</span><b id="optMs">—</b></div>
+          <div class="bar opt"><i id="optBar"></i></div>
+        </div>
+      </div>
+      <table style="margin-top:14px">
+        <thead><tr><th>Thuật toán</th><th class="num">Khớp</th><th class="num">Lệch</th><th class="num">Tổng</th></tr></thead>
+        <tbody id="reconRows"><tr><td colspan="4" class="empty">Chưa chạy đối soát.</td></tr></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>10 giao dịch gần nhất</h2>
+      <table>
+        <thead><tr><th>Loại</th><th class="num">Số tiền</th><th>Cổng</th></tr></thead>
+        <tbody id="txRows"><tr><td colspan="3" class="empty">Chưa có giao dịch.</td></tr></tbody>
+      </table>
+    </section>
+  </div>
+</div>
+
+<script>
+const WALLET = 'WAL-8892';
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => new Intl.NumberFormat('vi-VN').format(n);
+
+function log(msg, tone) {
+  const el = $('log');
+  el.textContent = msg || '';
+  el.style.color = tone === 'bad' ? 'var(--red)' : tone === 'ok' ? 'var(--green)' : '';
+}
+
+async function api(path, options) {
+  const res = await fetch(path, options);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(body?.error?.message || `HTTP ${res.status}`);
+    err.code = body?.error?.code || `HTTP_${res.status}`;
+    throw err;
+  }
+  return body;
+}
+
+const post = (path, body) => api(path, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify(body || {}),
+});
+
+async function refreshBalance() {
+  try {
+    const data = await api(`/api/wallet/balance?walletId=${encodeURIComponent(WALLET)}`);
+    $('balance').innerHTML = `${fmt(data.balance)}<small>đ</small>`;
+    $('balance').style.color = data.balance < 0 ? 'var(--red)' : '';
+    $('owner').textContent = `${data.owner} · nguồn: ${data.source}`;
+    $('updated').textContent = `cập nhật ${new Date().toLocaleTimeString('vi-VN')} (làm mới mỗi 2s)`;
+    $('health').className = 'dot up';
+    $('healthText').textContent = 'server online';
+  } catch (err) {
+    $('health').className = 'dot down';
+    $('healthText').textContent = 'mất kết nối';
+  }
+}
+
+async function refreshTransactions() {
+  try {
+    const data = await api(`/api/wallet/transactions?walletId=${encodeURIComponent(WALLET)}&limit=10`);
+    const rows = data.transactions || [];
+    $('txRows').innerHTML = rows.length
+      ? rows.map((t) => `<tr>
+          <td><span class="type t-${t.type}">${t.type}</span></td>
+          <td class="num ${t.status === 'REFUNDED' ? 's-REFUNDED' : ''}">${fmt(t.amount)}đ</td>
+          <td class="sub">${t.gateway || '—'}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" class="empty">Chưa có giao dịch.</td></tr>';
+  } catch { /* bỏ qua khi server chưa sẵn sàng */ }
+}
+
+/** Đưa ví về 100.000đ bằng refund (bỏ qua lỗi khi không còn gì để hoàn). */
+async function topUpByRefund() {
+  for (let i = 0; i < 6; i += 1) {
+    const { balance } = await api(`/api/wallet/balance?walletId=${encodeURIComponent(WALLET)}`);
+    if (balance >= 100000) return balance;
+    try { await post('/api/wallet/refund', { walletId: WALLET }); }
+    catch { return balance; }
+  }
+  return null;
+}
+
+async function nukeRace() {
+  const btn = $('btnRace');
+  btn.disabled = true;
+  log('Đang đưa số dư về 100.000đ rồi bắn 50 request…');
+  try {
+    await topUpByRefund();
+    const startedAt = performance.now();
+    const results = await Promise.all(Array.from({ length: 50 }, (_, i) =>
+      api('/api/wallet/withdraw', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ walletId: WALLET, amount: 100000, idempotencyKey: `DASH-${Date.now()}-${i}` }),
+      }).then(() => ({ ok: true })).catch((err) => ({ ok: false, code: err.code }))
+    ));
+    const ok = results.filter((r) => r.ok).length;
+    const ins = results.filter((r) => r.code === 'INSUFFICIENT_FUNDS').length;
+    const after = await api(`/api/wallet/balance?walletId=${encodeURIComponent(WALLET)}`);
+
+    $('rTotal').textContent = results.length;
+    $('rOk').textContent = ok;
+    $('rIns').textContent = ins;
+    $('rBal').textContent = `${fmt(after.balance)}đ`;
+    $('rSpread').textContent = `${Math.round(performance.now() - startedAt)} ms`;
+    $('rNeg').textContent = after.balance < 0 ? 'CÓ — SAI' : 'không';
+    $('rNeg').className = after.balance < 0 ? 'bad' : 'ok';
+
+    log(ok === 1 && ins === 49
+      ? `Chuẩn: 1 SUCCESS / 49 bị chặn, số dư ${fmt(after.balance)}đ — không âm.`
+      : `Bất thường: ${ok} SUCCESS / ${ins} bị chặn — kiểm tra mutex.`, ok === 1 ? 'ok' : 'bad');
+    await refreshBalance();
+    await refreshTransactions();
+  } catch (err) {
+    log(`Lỗi: ${err.message}`, 'bad');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function reconcile() {
+  const btn = $('btnRecon');
+  btn.disabled = true;
+  log('Đang chạy naive (đồng bộ, có thể mất ~1s)…');
+  try {
+    const naive = await post('/api/reconcile/naive');
+    log('Đang chạy optimized…');
+    const opt = await post('/api/reconcile/optimized');
+
+    $('naiveMs').textContent = `${naive.durationMs} ms`;
+    $('optMs').textContent = `${opt.durationMs} ms`;
+    const max = Math.max(naive.durationMs, opt.durationMs, 1);
+    $('naiveBar').style.width = `${Math.max(2, (naive.durationMs / max) * 100)}%`;
+    $('optBar').style.width = `${Math.max(2, (opt.durationMs / max) * 100)}%`;
+
+    $('reconRows').innerHTML = [
+      { name: 'Naive O(n²)', r: naive },
+      { name: 'Optimized O(n)', r: opt },
+    ].map(({ name, r }) => `<tr>
+        <td>${name}</td>
+        <td class="num ok">${fmt(r.matches)}</td>
+        <td class="num warn">${fmt(r.mismatches)}</td>
+        <td class="num">${fmt(r.total)}</td>
+      </tr>`).join('');
+
+    log(naive.matches === opt.matches && naive.mismatches === opt.mismatches
+      ? `Hai thuật toán cùng kết quả (${fmt(opt.matches)} khớp / ${fmt(opt.mismatches)} lệch).`
+      : 'CẢNH BÁO: hai thuật toán cho kết quả khác nhau!', naive.matches === opt.matches ? 'ok' : 'bad');
+  } catch (err) {
+    log(`Lỗi đối soát: ${err.message}`, 'bad');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function refund() {
+  const btn = $('btnRefund');
+  btn.disabled = true;
+  try {
+    const r = await post('/api/wallet/refund', { walletId: WALLET });
+    log(`Đã hoàn ${fmt(r.amount)}đ (${r.refundedTxId.slice(0, 8)}…) — số dư ${fmt(r.balance)}đ`, 'ok');
+    await refreshBalance();
+    await refreshTransactions();
+  } catch (err) {
+    log(err.code === 'NOTHING_TO_REFUND' ? 'Không có giao dịch nào để hoàn.' : `Lỗi: ${err.message}`, 'bad');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$('btnRace').addEventListener('click', nukeRace);
+$('btnRecon').addEventListener('click', reconcile);
+$('btnRefund').addEventListener('click', refund);
+
+refreshBalance();
+refreshTransactions();
+setInterval(refreshBalance, 2000);
+setInterval(refreshTransactions, 4000);
+</script>
+</body>
+</html>
