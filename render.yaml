@@ -1,0 +1,16 @@
+# Render Blueprint — Tự động deploy từ Monorepo
+services:
+  - type: web
+    name: fintech-payment-engine
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: buoi_2_ky_thuat_lap_trinh/fintech-payment-engine
+    buildCommand: ""
+    startCommand: node src/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.15.0
+      - key: VNP_HASH_SECRET
+        sync: false
